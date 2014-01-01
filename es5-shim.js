@@ -1,6 +1,8 @@
 // Copyright 2009-2012 by contributors, MIT License
 // vim: ts=4 sts=4 sw=4 expandtab
 
+//Add semicolon to prevent IIFE from being passed as argument to concated code.
+;
 // Module systems magic dance
 (function (definition) {
     // RequireJS
@@ -55,7 +57,7 @@ if (!Function.prototype.bind) {
         //   15.3.4.5.2.
         // 14. Set the [[HasInstance]] internal property of F as described in
         //   15.3.4.5.3.
-        var bound = function () {
+        var binder = function () {
 
             if (this instanceof bound) {
                 // 15.3.4.5.2 [[Construct]]
@@ -111,21 +113,36 @@ if (!Function.prototype.bind) {
             }
 
         };
+
+        // 15. If the [[Class]] internal property of Target is "Function", then
+        //     a. Let L be the length property of Target minus the length of A.
+        //     b. Set the length own property of F to either 0 or L, whichever is
+        //       larger.
+        // 16. Else set the length own property of F to 0.
+
+        var boundLength = Math.max(0, target.length - args.length);
+
+        // 17. Set the attributes of the length own property of F to the values
+        //   specified in 15.3.5.1.
+        var boundArgs = [];
+        for (var i = 0; i < boundLength; i++) {
+            boundArgs.push("$" + i);
+        }
+
+        // XXX Build a dynamic function with desired amount of arguments is the only 
+        // way to set the length property of a function. 
+        // In environments where Content Security Policies enabled (Chrome extensions, 
+        // for ex.) all use of eval or Function costructor throws an exception. 
+        // However in all of these environments Function.prototype.bind exists 
+        // and so this code will never be executed.
+        var bound = Function("binder", "return function(" + boundArgs.join(",") + "){return binder.apply(this,arguments)}")(binder);
+
         if (target.prototype) {
             Empty.prototype = target.prototype;
             bound.prototype = new Empty();
             // Clean up dangling references.
             Empty.prototype = null;
         }
-        // XXX bound.length is never writable, so don't even try
-        //
-        // 15. If the [[Class]] internal property of Target is "Function", then
-        //     a. Let L be the length property of Target minus the length of A.
-        //     b. Set the length own property of F to either 0 or L, whichever is
-        //       larger.
-        // 16. Else set the length own property of F to 0.
-        // 17. Set the attributes of the length own property of F to the values
-        //   specified in 15.3.5.1.
 
         // TODO
         // 18. Set the [[Extensible]] internal property of F to true.
@@ -189,6 +206,8 @@ if ((supportsAccessors = owns(prototypeOfObject, "__defineGetter__"))) {
 // IE < 9 bug: [1,2].splice(0).join("") == "" but should be "12"
 if ([1,2].splice(0).length != 2) {
     var array_splice = Array.prototype.splice;
+    var array_push = Array.prototype.push;
+    var array_unshift = Array.prototype.unshift;
 
     if (function() { // test IE < 9 to splice bug - see issue #138
         function makeArray(l) {
@@ -248,12 +267,12 @@ if ([1,2].splice(0).length != 2) {
             if (addElementsCount > 0) {
                 if (deleteCount <= 0) {
                     if (start == this.length) { // tiny optimisation #1
-                        this.push.apply(this, args);
+                        array_push.apply(this, args);
                         return [];
                     }
 
                     if (start == 0) { // tiny optimisation #2
-                        this.unshift.apply(this, args);
+                        array_unshift.apply(this, args);
                         return [];
                     }
                 }
@@ -319,8 +338,15 @@ if (!Array.isArray) {
 // and failure of `0 in boxedString` (Rhino)
 var boxedString = Object("a"),
     splitString = boxedString[0] != "a" || !(0 in boxedString);
+// Check node 0.6.21 bug where third parameter is not boxed
+var boxedForEach = true;
+if (Array.prototype.forEach) {
+    Array.prototype.forEach.call("foo", function(item, i, obj) {
+        if (typeof obj !== 'object') boxedForEach = false;
+    });
+}
 
-if (!Array.prototype.forEach) {
+if (!Array.prototype.forEach || !boxedForEach) {
     Array.prototype.forEach = function forEach(fun /*, thisp*/) {
         var object = toObject(this),
             self = splitString && _toString(this) == "[object String]" ?
@@ -695,7 +721,7 @@ if (
         year = this.getUTCFullYear();
 
         month = this.getUTCMonth();
-        // see https://github.com/kriskowal/es5-shim/issues/111
+        // see https://github.com/es-shims/es5-shim/issues/111
         year += Math.floor(month / 12);
         month = (month % 12 + 12) % 12;
 
@@ -1119,7 +1145,7 @@ if (
     'ab'.split(/(?:ab)*/).length !== 2 ||
     '.'.split(/(.?)(.?)/).length !== 4 ||
     'tesst'.split(/(s)*/)[1] === "t" ||
-    ''.split(/.?/).length === 0 ||
+    ''.split(/.?/).length ||
     '.'.split(/()()/).length > 1
 ) {
     (function () {
@@ -1236,7 +1262,7 @@ if ("".substr && "0b".substr(-1) !== "b") {
 }
 
 // ES5 15.5.4.20
-// http://es5.github.com/#x15.5.4.20
+// whitespace from: http://es5.github.io/#x15.5.4.20
 var ws = "\x09\x0A\x0B\x0C\x0D\x20\xA0\u1680\u180E\u2000\u2001\u2002\u2003" +
     "\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028" +
     "\u2029\uFEFF";
@@ -1254,6 +1280,20 @@ if (!String.prototype.trim || ws.trim()) {
             .replace(trimBeginRegexp, "")
             .replace(trimEndRegexp, "");
     };
+}
+
+// ES-5 15.1.2.2
+if (parseInt(ws + '08') !== 8 || parseInt(ws + '0x16') !== 22) {
+    parseInt = (function (origParseInt) {
+        var hexRegex = /^0[xX]/;
+        return function parseIntES5(str, radix) {
+            str = String(str).trim();
+            if (!+radix) {
+                radix = hexRegex.test(str) ? 16 : 10;
+            }
+            return origParseInt(str, radix);
+        };
+    }(parseInt));
 }
 
 //

@@ -1,3 +1,9 @@
+#es5-shim <sup>[![Version Badge][2]][1]</sup>
+
+[![npm badge][9]][1]
+
+[![Build Status][3]][4] [![dependency status][5]][6]  [![dev dependency status][7]][8]
+
 `es5-shim.js` and `es5-shim.min.js` monkey-patch a JavaScript context to
 contain all EcmaScript 5 methods that can be faithfully emulated with a
 legacy JavaScript engine.
@@ -37,7 +43,6 @@ So in order to run the tests against the built-in methods, invalidate that file 
 * Date.now
 * Date.prototype.toJSON
 * Function.prototype.bind
-    * :warning: Caveat: the bound function's length is always 0.
     * :warning: Caveat: the bound function has a prototype property.
     * :warning: Caveat: bound functions do not try too hard to keep you
       from manipulating their ``arguments`` and ``caller`` properties.
@@ -49,6 +54,7 @@ So in order to run the tests against the built-in methods, invalidate that file 
 * String.prototype.trim
 * Date.parse (for ISO parsing)
 * Date.prototype.toISOString
+* parseInt
 
 ## Shams
 
@@ -107,7 +113,7 @@ So in order to run the tests against the built-in methods, invalidate that file 
 ### May fail
 
 * :warning: Object.getOwnPropertyDescriptor
-    
+
     The behavior of this shim does not conform to ES5.  It should
     probably not be used at this time, until its behavior has been
     reviewed and been confirmed to be useful in legacy engines.
@@ -121,12 +127,12 @@ So in order to run the tests against the built-in methods, invalidate that file 
 
     In slightly better circumstances, this method will silently fail to
     set "writable", "enumerable", and "configurable" properties.
-    
+
     Providing a getter or setter with "get" or "set" on a descriptor
     will silently fail on engines that lack "__defineGetter__" and
     "__defineSetter__", which include all versions of IE.
 
-    https://github.com/kriskowal/es5-shim/issues#issue/5
+    https://github.com/es-shims/es5-shim/issues#issue/5
 
 * :warning: Object.defineProperties
 
@@ -152,4 +158,14 @@ So in order to run the tests against the built-in methods, invalidate that file 
     fine unless you are depending on the safety and security
     provisions of this method, which you cannot possibly
     obtain in legacy engines.
+
+[1]: https://npmjs.org/package/es5-shim
+[2]: http://vb.teelaun.ch/es-shims/es5-shim.svg
+[3]: https://travis-ci.org/es-shims/es5-shim.png
+[4]: https://travis-ci.org/es-shims/es5-shim
+[5]: https://david-dm.org/es-shims/es5-shim.png
+[6]: https://david-dm.org/es-shims/es5-shim
+[7]: https://david-dm.org/es-shims/es5-shim/dev-status.png
+[8]: https://david-dm.org/es-shims/es5-shim#info=devDependencies
+[9]: https://nodei.co/npm/es5-shim.png?downloads=true&stars=true
 
